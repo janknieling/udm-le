@@ -15,21 +15,27 @@ Out of the box, it has tested support for select [DNS providers](#dns-providers)
 
 ## Installation
 
+### UniFi OS 1.X
 1. Copy the contents of this repo to your device at `/mnt/data/udm-le`.
 2. Edit `udm-le.env` and tweak variables to meet your needs.
 3. Run `/mnt/data/udm-le/udm-le.sh initial`. This will handle your initial certificate generation and setup a cron task at `/etc/cron.d/udm-le` to attempt certificate renewal each morning at 0300.
+
+### UniFi OS 2.X
+1. Copy the contents of this repo to your device at `/data/udm-le`.
+2. Edit `udm-le.env` and tweak variables to meet your needs.
+3. Run `/data/udm-le/udm-le.sh initial`. This will handle your initial certificate generation and setup a cron task at `/etc/cron.d/udm-le` to attempt certificate renewal each morning at 0300.
 
 ## Persistance
 
 On firmware updates or just reboots, the cron file (`/etc/cron.d/udm-le`) gets removed, so if you'd like for this to persist, I suggest so you install boostchicken's [on-boot-script](https://github.com/boostchicken/udm-utilities/tree/master/on-boot-script) package.
 
-This script is setup such that if it determines that on-boot-script is enabled, it will set up an additional script at `/mnt/data/on_boot.d/99-udm-le.sh` which will attempt certificate renewal shortly after a reboot (and subsequently set the cron back up again).
+This script is setup such that if it determines that on-boot-script is enabled, it will set up an additional script at `/mnt/data/on_boot.d/99-udm-le.sh`  (UniFi OS 1.X) or at `/data/on_boot.d/99-udm-le.sh` (UniFi OS 2.X) which will attempt certificate renewal shortly after a reboot (and subsequently set the cron back up again).
 
 ## DNS Providers
 
 ### AWS Route53
 
-AWS Route53 DNS challenge can use configuration and authentication values easily through shared credentials and configuration files [as described here](https://go-acme.github.io/lego/dns/route53/). This script will check for and include these files during the initial certificate generation and subsequent renewals. Ensure that `route53` is set for `DNS_PROVIDER` in `udm-le.env`, create a new directory called `.secrets` in `/mnt/data/udm-le` and add `credentials` and `config` files as required for your authentication. See the [AWS CLI Documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) for more information. Currently only the `default` profile is supported.
+AWS Route53 DNS challenge can use configuration and authentication values easily through shared credentials and configuration files [as described here](https://go-acme.github.io/lego/dns/route53/). This script will check for and include these files during the initial certificate generation and subsequent renewals. Ensure that `route53` is set for `DNS_PROVIDER` in `udm-le.env`, create a new directory called `.secrets` in `/mnt/data/udm-le` on UniFi OS 1.X or `/data/udm-le` on UniFi OS 2.X and add `credentials` and `config` files as required for your authentication. See the [AWS CLI Documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) for more information. Currently only the `default` profile is supported.
 
 ### Azure DNS
 
@@ -68,7 +74,8 @@ If you use Gandi Live DNS (v5) as your DNS provider, set your `DNS_PROVIDER` to 
 
 ### Google Cloud DNS
 
-GCP Cloud DNS can be configured by establishing a service account with the role [`roles/dns.admin`](https://cloud.google.com/iam/docs/understanding-roles#dns-roles) and exporting a [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys) for that service account. Ensure that `gcloud` is set for `DNS_PROVIDER` in `udm-le.env`, and `GCE_SERVICE_ACCOUNT_FILE` references the path to the service account key (e.g. `./root/.secrets/my_service_account.json`) . Create a new directory called `.secrets` in `/mnt/data/udm-le` and add the service account file.
+GCP Cloud DNS can be configured by establishing a service account with the role [`roles/dns.admin`](https://cloud.google.com/iam/docs/understanding-roles#dns-roles) and exporting a [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys) for that service account. Ensure that `gcloud` is set for `DNS_PROVIDER` in `udm-le.env`, and `GCE_SERVICE_ACCOUNT_FILE` references the path to the service account key (e.g. `./root/.secrets/my_service_account.json`) . On UniFi OS 1.X create a new directory called `.secrets` in `/mnt/data/udm-le` and add the service account file. On UniFi OS 2.X create a new directory called `.secrets` in `/data/udm-le` and add the service account file.
+
 
 The CLI will output a JSON object. Use the printed properties to initialize your configuration in [udm-le.env](./udm-le.env).
 
@@ -104,11 +111,21 @@ ocid1.compartment.oc1..secret
 
 #### To configure the provider
 
+##### UniFi OS 1.X
+
 > **Important: do not wrap the values of the `OCI_*` variables in `udm-le.env` with quotes. The lack of quotes around the example values provided in [`udm-le.env`](./udm-le.env) is intentional and must be maintained.
 
 1. Set the `DNS_PROVIDER` value to `"oraclecloud"`
 1. Uncomment and copy the values from each `~/.oci/config` variable to the similarly named `OCI_*` variable in `udm-le.env`.
 1. Create a new directory at `/mnt/data/udm-le/.secrets` and copy the `oci_api_key.pem` file that directory.
+
+##### UniFi OS 2.X
+
+> **Important: do not wrap the values of the `OCI_*` variables in `udm-le.env` with quotes. The lack of quotes around the example values provided in [`udm-le.env`](./udm-le.env) is intentional and must be maintained.
+
+1. Set the `DNS_PROVIDER` value to `"oraclecloud"`
+1. Uncomment and copy the values from each `~/.oci/config` variable to the similarly named `OCI_*` variable in `udm-le.env`.
+1. Create a new directory at `/data/udm-le/.secrets` and copy the `oci_api_key.pem` file that directory.
 
 ### Zonomi
 
