@@ -2,10 +2,12 @@
 
 ## Overview
 
-This should work on UbiOS based firmware versions 1.7.0 onwards. This includes:
+This should work on UbiOS based firmware versions 1.X and 2.X onwards. This includes:
 
 * UniFi Dream Machine
 * UniFi Dream Machine Pro
+* UniFi Dream Machine Pro SE
+* UniFi Dream Router
 
 It does *NOT* support the Cloud Key Gen 2 or Gen 2 Plus as they do not ship with Docker (podman) support.
 
