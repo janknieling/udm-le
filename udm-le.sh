@@ -26,7 +26,7 @@ UDM_LE_PATH="$DATA_DIR/udm-le"
 # Load environment variables
 . $DATA_DIR/udm-le/udm-le.env
 
-# Check UniFi Dream Machine model and firmware version
+# Check UniFi Dream Machine model and firmware version and print out to console
 udm_model() {
   case "$(ubnt-device-info model || true)" in
     "UniFi Dream Machine SE")
@@ -107,7 +107,7 @@ while [ : ]; do
   esac
 done
 
-deploy_certs_1-X() {
+deploy_certs_1-x() {
 	# Deploy certificates for the controller and optionally for the captive portal and radius server
 
 	# Re-write CERT_NAME if it is a wildcard cert. Replace * with _
@@ -133,7 +133,7 @@ deploy_certs_1-X() {
 	fi
 }
 
-deploy_certs_2-X() {
+deploy_certs_2-x() {
 	# Deploy certificates for the controller and optionally for the captive portal and radius server
 
 	# Re-write CERT_NAME if it is a wildcard cert. Replace * with _
@@ -184,7 +184,8 @@ restart_services_2-X() {
 	# Restart services if certificates have been deployed, or we're forcing it on the command line
 	if [ "${RESTART_SERVICES}" == true ]; then
 		echo 'Restarting UniFi OS'
-		unifi-os restart &>/dev/null
+		systemctl restart unifi-core &>/dev/null
+		systemctl restart unifi &>/dev/null
 
 		if [ "$ENABLE_RADIUS" == "yes" ]; then
 			echo 'Restarting Radius server'
@@ -201,7 +202,7 @@ restart_services_2-X() {
 	fi
 }
 
-update_keystore_1-X() {
+update_keystore_1-x() {
 	if [ "$NO_BUNDLE" == "yes" ]; then
 		# Only import server certifcate to keystore. WiFiman requires a single certificate in the .crt file 
 		# and does not work if the full chain is imported as this includes the CA intermediate certificates.
@@ -209,14 +210,14 @@ update_keystore_1-X() {
 		# 1. Export only the server certificate from the full chain bundle
 		podman exec -it unifi-os openssl x509 -in ${UNIFIOS_1-X_CERT_PATH}/unifi-core.crt > ${UNIFIOS_1-X_CERT_PATH}/unifi-core-server-only.crt
 		# 2. Bundle the private key and server-only certificate into a PKCS12 format file
-		podman exec -it unifi-os openssl pkcs12 -export -inkey ${UNIFIOS_1-X_CERT_PATH}/unifi-core.key -in ${UNIFIOS_CERT_PATH}/unifi-core-server-only.crt \
+		podman exec -it unifi-os openssl pkcs12 -export -inkey ${UNIFIOS_1-X_CERT_PATH}/unifi-core.key -in ${UNIFIOS_1-X_CERT_PATH}/unifi-core-server-only.crt \
 			-out ${UNIFIOS_1-X_KEYSTORE_PATH}/unifi-core-key-plus-server-only-cert.p12 -name ${UNIFIOS_1-X_KEYSTORE_CERT_ALIAS} -password pass:${UNIFIOS_1-X_KEYSTORE_PASSWORD}
 		# 3. Backup the keystore before editing it.
 		podman exec -it unifi-os cp ${UNIFIOS_1-X_KEYSTORE_PATH}/keystore ${UNIFIOS_1-X_KEYSTORE_PATH}/keystore_$(date +"%Y-%m-%d_%Hh%Mm%Ss").backup
 		# 4. Delete the existing full chain from the keystore
 		podman exec -it unifi-os keytool -delete -alias unifi -keystore ${UNIFIOS_1-X_KEYSTORE_PATH}/keystore -deststorepass ${UNIFIOS_1-X_KEYSTORE_PASSWORD}
 		# 5. Import the server-only certificate and private key from the PKCS12 file
-		podman exec -it unifi-os keytool -importkeystore -deststorepass ${UNIFIOS_1-X_KEYSTORE_PASSWORD} -destkeypass ${UNIFIOS_KEYSTORE_PASSWORD} \
+		podman exec -it unifi-os keytool -importkeystore -deststorepass ${UNIFIOS_1-X_KEYSTORE_PASSWORD} -destkeypass ${UNIFIOS_1-X_KEYSTORE_PASSWORD} \
 			-destkeystore ${UNIFIOS_1-X_KEYSTORE_PATH}/keystore -srckeystore ${UNIFIOS_1-X_KEYSTORE_PATH}/unifi-core-key-plus-server-only-cert.p12 \
 			-srcstoretype PKCS12 -srcstorepass ${UNIFIOS_1-X_KEYSTORE_PASSWORD} -alias ${UNIFIOS_1-X_KEYSTORE_CERT_ALIAS} -noprompt
 	else
@@ -226,28 +227,28 @@ update_keystore_1-X() {
 	fi
 }
 
-update_keystore_2-X() {
+update_keystore_2-x() {
 	if [ "$NO_BUNDLE" == "yes" ]; then
 		# Only import server certifcate to keystore. WiFiman requires a single certificate in the .crt file 
 		# and does not work if the full chain is imported as this includes the CA intermediate certificates.
 		echo "	- Importing server certificate only"
 		# 1. Export only the server certificate from the full chain bundle
-		podman exec -it unifi-os openssl x509 -in ${UNIFIOS_2-X_CERT_PATH}/unifi-core.crt > ${UNIFIOS_2-X_CERT_PATH}/unifi-core-server-only.crt
+		openssl x509 -in ${UNIFIOS_2-X_CERT_PATH}/unifi-core.crt > ${UNIFIOS_2-X_CERT_PATH}/unifi-core-server-only.crt
 		# 2. Bundle the private key and server-only certificate into a PKCS12 format file
-		podman exec -it unifi-os openssl pkcs12 -export -inkey ${UNIFIOS_2-X_CERT_PATH}/unifi-core.key -in ${UNIFIOS_2-X_CERT_PATH}/unifi-core-server-only.crt \
-			-out ${UNIFIOS_2-X_KEYSTORE_PATH}/unifi-core-key-plus-server-only-cert.p12 -name ${UNIFIOS_KEYSTORE_CERT_ALIAS} -password pass:${UNIFIOS_2-X_KEYSTORE_PASSWORD}
+		openssl pkcs12 -export -inkey ${UNIFIOS_2-X_CERT_PATH}/unifi-core.key -in ${UNIFIOS_2-X_CERT_PATH}/unifi-core-server-only.crt \
+			-out ${UNIFIOS_2-X_KEYSTORE_PATH}/unifi-core-key-plus-server-only-cert.p12 -name ${UNIFIOS_2-X_KEYSTORE_CERT_ALIAS} -password pass:${UNIFIOS_2-X_KEYSTORE_PASSWORD}
 		# 3. Backup the keystore before editing it.
-		podman exec -it unifi-os cp ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore_$(date +"%Y-%m-%d_%Hh%Mm%Ss").backup
+		cp ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore_$(date +"%Y-%m-%d_%Hh%Mm%Ss").backup
 		# 4. Delete the existing full chain from the keystore
-		podman exec -it unifi-os keytool -delete -alias unifi -keystore ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore -deststorepass ${UNIFIOS_2-X_KEYSTORE_PASSWORD}
+		keytool -delete -alias unifi -keystore ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore -deststorepass ${UNIFIOS_2-X_KEYSTORE_PASSWORD}
 		# 5. Import the server-only certificate and private key from the PKCS12 file
-		podman exec -it unifi-os keytool -importkeystore -deststorepass ${UNIFIOS_2-X_KEYSTORE_PASSWORD} -destkeypass ${UNIFIOS_2-X_KEYSTORE_PASSWORD} \
+		keytool -importkeystore -deststorepass ${UNIFIOS_2-X_KEYSTORE_PASSWORD} -destkeypass ${UNIFIOS_2-X_KEYSTORE_PASSWORD} \
 			-destkeystore ${UNIFIOS_2-X_KEYSTORE_PATH}/keystore -srckeystore ${UNIFIOS_2-X_KEYSTORE_PATH}/unifi-core-key-plus-server-only-cert.p12 \
 			-srcstoretype PKCS12 -srcstorepass ${UNIFIOS_2-X_EYSTORE_PASSWORD} -alias ${UNIFIOS_2-X_KEYSTORE_CERT_ALIAS} -noprompt
 	else
 		# Import full certificate chain bundle to keystore
 		echo "	- Importing full certificate chain bundle"
-		podman exec -it unifi-os ${CERT_IMPORT_CMD_2-X} ${UNIFIOS_2-X_CERT_PATH}/unifi-core.key ${UNIFIOS_CERT_PATH}/unifi-core.crt
+		${CERT_IMPORT_CMD_2-X} ${UNIFIOS_2-X_CERT_PATH}/unifi-core.key ${UNIFIOS_CERT_PATH}/unifi-core.crt
 	fi
 }
 
@@ -264,12 +265,7 @@ for DOMAIN in $(echo $CERT_HOSTS | tr "," "\n"); do
 	LEGO_ARGS="${LEGO_ARGS} -d ${DOMAIN}"
 done
 
-# Check for optional .secrets directory, and add it to the mounts if it exists
-# Lego does not support AWS_ACCESS_KEY_ID_FILE or AWS_PROFILE_FILE so we'll try
-# mounting the secrets directory into a place that Route53 will see.
-if [ -d "${UDM_LE_PATH}/.secrets" ]; then
-	DOCKER_VOLUMES="${DOCKER_VOLUMES} -v ${UDM_LE_PATH}/.secrets:/root/.aws/ -v ${UDM_LE_PATH}/.secrets:/root/.secrets/"
-fi
+
 
 # Setup persistent on_boot.d trigger
 ON_BOOT_DIR='$DATA_DIR/on_boot.d'
@@ -287,34 +283,95 @@ if [ ! -f "${CRON_FILE}" ]; then
 	/etc/init.d/crond reload ${CRON_FILE}
 fi
 
-PODMAN_CMD="podman run --env-file=${UDM_LE_PATH}/udm-le.env -it --name=lego --network=host --rm ${DOCKER_VOLUMES} ${CONTAINER_IMAGE}:${CONTAINER_IMAGE_TAG}"
-
-case $1 in
-initial)
-	# Create lego directory so the container can write to it
-	if [ "$(stat -c '%u:%g' "${UDM_LE_PATH}/lego")" != "1000:1000" ]; then
-		mkdir "${UDM_LE_PATH}"/lego
-		chown 1000:1000 "${UDM_LE_PATH}"/lego
+run_unifios_1-x() {
+	# Check for optional .secrets directory, and add it to the mounts if it exists
+	# Lego does not support AWS_ACCESS_KEY_ID_FILE or AWS_PROFILE_FILE so we'll try
+	# mounting the secrets directory into a place that Route53 will see.
+	if [ -d "${UDM_LE_PATH}/.secrets" ]; then
+		DOCKER_VOLUMES="${DOCKER_VOLUMES} -v ${UDM_LE_PATH}/.secrets:/root/.aws/ -v ${UDM_LE_PATH}/.secrets:/root/.secrets/"
 	fi
+	
+	PODMAN_CMD="podman run --env-file=${UDM_LE_PATH}/udm-le.env -it --name=lego --network=host --rm ${DOCKER_VOLUMES} ${CONTAINER_IMAGE}:${CONTAINER_IMAGE_TAG}"
 
-	echo 'Attempting initial certificate generation'
-	${PODMAN_CMD} ${LEGO_ARGS} --accept-tos run && deploy_certs && restart_services
-	;;
-renew)
-	echo 'Attempting certificate renewal'
-	echo ${PODMAN_CMD} ${LEGO_ARGS}
-	${PODMAN_CMD} ${LEGO_ARGS} renew --days 60 && deploy_certs && restart_services
-	;;
-test_deploy)
-	echo 'Attempting to deploy certificate'
-	deploy_certs
-	;;
-update_keystore)
-	echo 'Attempting to update keystore used by hotspot Captive Portal and WiFiman'
-	update_keystore && restart_services
-	;;
-*)
-	echo "ERROR: No valid action provided."
-	usage;
-	exit 1;
+	case $1 in
+	initial)
+		# Create lego directory so the container can write to it
+		if [ "$(stat -c '%u:%g' "${UDM_LE_PATH}/lego")" != "1000:1000" ]; then
+			mkdir "${UDM_LE_PATH}"/lego
+			chown 1000:1000 "${UDM_LE_PATH}"/lego
+		fi
+
+		echo 'Attempting initial certificate generation'
+		${PODMAN_CMD} ${LEGO_ARGS} --accept-tos run && deploy_certs_1-x && restart_services_1-x
+		;;
+	renew)
+		echo 'Attempting certificate renewal'
+		echo ${PODMAN_CMD} ${LEGO_ARGS}
+		${PODMAN_CMD} ${LEGO_ARGS} renew --days 60 && deploy_certs_1-x && restart_services_1-x
+		;;
+	test_deploy)
+		echo 'Attempting to deploy certificate'
+		deploy_certs_1-x
+		;;
+	update_keystore)
+		echo 'Attempting to update keystore used by hotspot Captive Portal and WiFiman'
+		update_keystore_1-x && restart_services_1-x
+		;;
+	*)
+		echo "ERROR: No valid action provided."
+		usage;
+		exit 1;
+	esac	
+}
+
+run_unifios_2-x() {
+	# Create LEGO directory
+	mkdir "${UDM_LE_PATH}"/lego
+	# Download latest LEGO binaries
+	curl -o /tmp/"${LEGO_VERSION}" ${LEGO_RELEASE_URL}/${LEGO_VERSION}
+	# Unpack LEGO to UDM_LE_PATH
+	tar -xzf /tmp/"${LEGO_VERSION}" -C "${UDM_LE_PATH}"/lego
+	# Make it executable
+	chmod +x "${UDM_LE_PATH}"/lego/lego
+
+	LEGO_CMD="${UDM_LE_PATH}"/lego/lego
+
+	case $1 in
+	initial)
+		echo 'Attempting initial certificate generation'
+		${LEGO_CMD} ${LEGO_ARGS} --accept-tos run && deploy_certs_2-x && restart_services_2-x
+		;;
+	renew)
+		echo 'Attempting certificate renewal'
+		echo ${LEGO_CMD} ${LEGO_ARGS}
+		${LEGO_CMD} ${LEGO_ARGS} renew --days 60 && deploy_certs_2-x && restart_services_2-x
+		;;
+	test_deploy)
+		echo 'Attempting to deploy certificate'
+		deploy_certs_2-x
+		;;
+	update_keystore)
+		echo 'Attempting to update keystore used by hotspot Captive Portal and WiFiman'
+		update_keystore_2-x && restart_services_2-x
+		;;
+	*)
+		echo "ERROR: No valid action provided."
+		usage;
+		exit 1;
+	esac	
+
+}
+
+case "$(udm_model)" in
+  udmlegacy|udmprolegacy)
+    echo "$(ubnt-device-info model) version $(ubnt-device-info firmware) was detected"
+	echo "installing udm-le using podman"
+	depends_on podman
+	run_unifios_1-x
+
+  udr|udmse|udm|udmpro)
+    echo "$(ubnt-device-info model) version $(ubnt-device-info firmware) was detected"
+    echo "Installing udm-le using lego binaries"
+    depends_on systemctl
+	run_unifios_2-x
 esac
