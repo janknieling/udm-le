@@ -1,8 +1,8 @@
-# Let's Encrypt for Ubiquiti UbiOS firmwares
+# Let's Encrypt for Ubiquiti UniFiOS firmwares
 
 ## Overview
 
-This should work on UbiOS based firmware versions 1.X and 2.X onwards. This includes:
+This should work on UniFiOS based firmware versions 1.X and 2.X onwards. This includes:
 
 * UniFi Dream Machine
 * UniFi Dream Machine Pro
@@ -16,6 +16,8 @@ This script supports issuing LetsEncrypt certificates via DNS using [Lego](https
 Out of the box, it has tested support for select [DNS providers](#dns-providers) but with little work you could get it working with any of the supported [Lego DNS Providers](https://go-acme.github.io/lego/dns/).
 
 ## Installation
+
+You can determinate your device type and UniFi OS version  with this command: `ubnt-device-info summary`
 
 ### UniFi OS 1.X
 1. Copy the contents of this repo to your device at `/mnt/data/udm-le`.
