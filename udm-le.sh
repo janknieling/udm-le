@@ -2,8 +2,56 @@
 
 set -e
 
+# Set data dir
+
+DATA_DIR="/mnt/data"
+case "$(ubnt-device-info firmware || true)" in
+    1*)
+      DATA_DIR="/mnt/data"
+      ;;
+    2*)
+      DATA_DIR="/data"
+      ;;
+    3*)
+      DATA_DIR="/data"
+      ;;
+    *)
+      echo "ERROR: No persistent storage found." 1>&2
+      exit 1
+      ;;
+  esac
+
 # Load environment variables
-. /mnt/data/udm-le/udm-le.env
+. $DATA_DIR/udm-le/udm-le.env
+
+# Check UniFi Dream Machine model and firmware version
+udm_model() {
+  case "$(ubnt-device-info model || true)" in
+    "UniFi Dream Machine SE")
+      echo "udmse"
+      ;;
+    "UniFi Dream Machine Pro")
+      if test $(ubnt-device-info firmware) \< "2.0.0"; then 
+        echo "udmprolegacy"
+      else 
+        echo "udmpro"
+      fi
+      ;;
+    "UniFi Dream Machine")
+      if test $(ubnt-device-info firmware) \< "2.0.0"; then 
+        echo "udmlegacy"
+      else 
+        echo "udm"
+      fi
+      ;;
+    "UniFi Dream Router")
+      echo "udr"
+      ;;
+    *)
+      echo "unknown"
+      ;;
+  esac
+}
 
 # Setup variables for later
 DOCKER_VOLUMES="-v ${UDM_LE_PATH}/lego/:/.lego/"
